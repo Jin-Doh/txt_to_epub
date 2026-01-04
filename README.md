@@ -2,7 +2,7 @@
 
 > **Python 3.14 (Free-Threading) Ready** > 대용량 텍스트 파일(웹소설 등)을 고품질 EPUB 전자책으로 초고속 변환하는 도구입니다.
 
-![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
+![Python Version](https://img.shields.io/badge/python-3.14%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen)
 
