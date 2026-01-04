@@ -113,8 +113,8 @@ def cpu_bound_text_parsing(
             if not clean_p:
                 continue
 
-            # [시각적 개선] 구분선(===, ---, ***) 처리
-            # 줄의 구성 문자가 =, -, * 로만 되어 있으면 <hr/>로 변환
+            # 구분선(===, ---, ***)은 장면 전환으로 간주해 <hr/>로 변환
+            # (줄이 =, -, * 및 공백으로만 구성되어 있는 경우)
             if set(clean_p) <= {"=", "-", "*", " "}:
                 body_parts.append('<hr class="scene-break"/>')
             else:

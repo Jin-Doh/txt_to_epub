@@ -24,6 +24,7 @@ async def _run_conversion(
     shutdown_timeout: Optional[float] = None,
     overwrite: bool = False,
 ):
+    # 1. 자산 파싱 (여기서 표지 이미지를 찾습니다)
     books = await parse_books(asset_dir)
     if not books:
         LOGGER.info("No books found in %s", asset_dir)
@@ -41,9 +42,12 @@ async def _run_conversion(
     ) as processor:
 
         async def _worker(
-            txt_path: Path, out_path: Path, cancel_event: threading.Event
+            txt_path: Path,
+            out_path: Path,
+            cancel_event: threading.Event,
+            meta_data,  # parser에서 찾은 메타데이터(표지 경로 등)
         ):
-            # [Fast Fail] 대기열 진입 전 취소 확인
+            # 대기열에 들어가기 전에 취소 여부를 빠르게 확인
             if cancel_event.is_set():
                 return
 
@@ -52,8 +56,12 @@ async def _run_conversion(
                 if cancel_event.is_set():
                     return
                 try:
+                    # metadata_override 인자를 통해 표지 정보를 전달
                     await processor.process_book(
-                        txt_path, out_path, cancel_event=cancel_event
+                        txt_path,
+                        out_path,
+                        cancel_event=cancel_event,
+                        metadata_override=meta_data,
                     )
                 except Exception:
                     LOGGER.exception("Error converting %s", txt_path.name)
@@ -62,27 +70,29 @@ async def _run_conversion(
 
         tasks = []
         cancel_events: list[threading.Event] = []
-
-        # 진행률 표시줄 미리 생성 (Total 계산)
         total_tasks = 0
 
         for txt_path, meta in books.items():
             # 출력 파일명 정제 (제목과 유사하게 깔끔하게)
-            # 메타데이터의 제목이 있으면 우선 사용, 없으면 파일명 사용
             raw_name = meta.title if meta.title else txt_path.stem
-            # 불필요한 태그 제거 (worker의 로직과 유사하게 적용)
-            clean_name = re.sub(r"\[.*?\]|\d+[-~]\d+|@.*|텍본", "", raw_name).strip()
+            # 불필요한 태그 제거 ([...], 00-00, 完 등)
+            clean_name = re.sub(r"\[.*?\]|\d+[-~]\d+|@.*|텍본|完", "", raw_name).strip()
             # 파일시스템 안전 문자열로 변환
             safe_name = "".join(
                 c if c.isalnum() or c in " -_" else "" for c in clean_name
             ).strip()
             if not safe_name:
-                safe_name = "Untitled_Book"  # 비어버린 경우 대비
+                safe_name = "Untitled_Book"
 
             out_path = output_dir / f"{safe_name}.epub"
 
             if dry_run:
-                LOGGER.info("[dry-run] %s -> %s", txt_path.name, out_path.name)
+                LOGGER.info(
+                    "[dry-run] %s -> %s (Cover: %s)",
+                    txt_path.name,
+                    out_path.name,
+                    meta.cover_image_path.name if meta.cover_image_path else "None",
+                )
                 continue
 
             if out_path.exists() and not overwrite:
@@ -91,7 +101,11 @@ async def _run_conversion(
 
             cancel_event = threading.Event()
             cancel_events.append(cancel_event)
-            tasks.append(asyncio.create_task(_worker(txt_path, out_path, cancel_event)))
+
+            # _worker에 meta 객체를 함께 전달
+            tasks.append(
+                asyncio.create_task(_worker(txt_path, out_path, cancel_event, meta))
+            )
             total_tasks += 1
 
         if not tasks:
