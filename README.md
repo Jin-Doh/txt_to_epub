@@ -1,98 +1,120 @@
-주요 기능
-----------
+# 📚 High-Performance TXT to EPUB Converter
 
-- 자동으로 텍스트 폴더와 형제 이미지에서 표지 이미지를 탐색합니다.
-- 챕터 헤더(예: "1화", "제1장", "Chapter 1")를 감지해 챕터별로 EPUB을 생성합니다.
-- 멀티스레드·비동기 조합으로 병렬 변환을 수행합니다.
-- 드라이런, 덮어쓰기, 작업 제한(동시성/워커 수), 전역 타임아웃 등을 지원합니다.
+> **Python 3.14 (Free-Threading) Ready** > 대용량 텍스트 파일(웹소설 등)을 고품질 EPUB 전자책으로 초고속 변환하는 도구입니다.
 
-설치
------
+![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-stable-brightgreen)
 
-다음 예시는 Bash(Windows의 `bash.exe` 포함)를 기준으로 한 빠른 설정 방법입니다.
+## ✨ 주요 기능 (Key Features)
 
+이 프로젝트는 단순한 텍스트 변환을 넘어, 전자책 리더기에서의 **가독성**과 **호환성**에 최적화되어 있습니다.
+
+- **🚀 압도적인 성능 (High Performance)**
+  - **AsyncIO** (비동기 I/O)와 **Multi-threading**을 결합하여 수백 권의 책도 순식간에 변환합니다.
+  - Python 3.14의 **No-GIL(Free-Threading)** 환경에서 CPU 코어를 100% 활용하도록 설계되었습니다.
+
+- **📖 스마트 챕터 분할 (Smart Chapter Splitting)**
+  - 통파일(예: `0-1230화.txt`)을 분석하여 챕터(`1화`, `#1`, `Chapter 1`) 단위로 자동 분할합니다.
+  - 리더기에서 목차(TOC) 기능이 완벽하게 작동하여 쾌적한 탐색이 가능합니다.
+
+- **🎨 표지 이미지 자동 감지 & Apple Books 호환**
+  - 텍스트 파일과 같은 이름의 이미지(`Book.jpg`)나 폴더 내 `cover.jpg`를 자동으로 찾아 표지로 설정합니다.
+  - **아이폰/아이패드 최적화**: 서재 썸네일뿐만 아니라, 책을 펼쳤을 때 첫 페이지에도 표지가 나오도록 강제 페이지를 생성합니다.
+
+- **💅 고품질 타이포그래피 (Styling)**
+  - 가독성을 위한 기본 CSS(`KoPub Batang` 기반)가 내장되어 있습니다.
+  - `===`, `* * *` 같은 텍스트 구분선을 깔끔한 `<hr>` 태그로 자동 변환합니다.
+
+- **🌍 강력한 인코딩 감지**
+  - UTF-8, UTF-8-SIG, CP949(EUC-KR), Latin-1 등을 순차적으로 감지하여 글자 깨짐(Mojibake)을 방지합니다.
+
+---
+
+## 🛠️ 설치 방법 (Installation)
+
+이 프로젝트는 [uv](https://github.com/astral-sh/uv) 패키지 매니저를 권장합니다. (일반 `pip`도 사용 가능)
+
+### 1. 저장소 클론
 ```bash
-python -m venv .venv
-source .venv/Scripts/activate
-pip install --upgrade pip
-pip install aiofiles ebooklib tqdm pytest pytest-asyncio
+git clone https://github.com/your-username/txt-to-epub.git
+cd txt-to-epub
 ```
 
-또는 현재 디렉터리의 `pyproject.toml`에 정의된 의존성을 이용해 설치하려면:
+### 2. 의존성 설치
 
+**방법 A: `uv` 사용 (권장)**
 ```bash
-pip install -e .
+# 가상환경 생성 및 패키지 동기화
+uv sync
 ```
 
-사용법 (`uv` 기준)
--------------------
-
-이 저장소에서는 로컬에서 명령을 실행할 때 `uv` 유틸리티를 이용해 파이썬 모듈을 실행하는 사례가 있습니다. `uv`는 임의의 실행 래퍼로 사용되는 예시 커맨드입니다. 아래 예시는 `uv run <command>` 형식으로 실행할 수 있습니다.
-
-- 텍스트 자산 파싱(검사용):
-
+**방법 B: `pip` 사용**
 ```bash
-uv run python -m src.lib.parser
+pip install -r requirements.txt
+# 또는 직접 설치
+pip install ebooklib aiofiles tqdm
 ```
 
-- 전체 변환 (예: `assets` 폴더를 `out` 폴더로 변환):
+---
 
+## 🚀 사용 방법 (Usage)
+
+변환할 텍스트 파일과 표지 이미지를 `assets` 폴더에 넣고 실행하면 됩니다.
+
+### 기본 실행
 ```bash
-uv run python -m src.main --assets assets --out out --workers 4
+# uv 사용 시
+uv run python -m src.main
+
+# 일반 python 사용 시
+python -m src.main
+```
+위 명령어를 실행하면 `assets/` 폴더의 모든 텍스트 파일을 변환하여 `out/` 폴더에 저장합니다.
+
+### 고급 옵션 (CLI Arguments)
+```bash
+python -m src.main \
+    --assets "./my_novels" \    # 입력 폴더 지정 (기본값: assets)
+    --out "./ebooks" \          # 출력 폴더 지정 (기본값: out)
+    --workers 8 \               # CPU 작업 스레드 수 (기본값: CPU 코어 수)
+    --concurrency 4 \           # 동시 변환 파일 수 (I/O 제어)
+    --overwrite                 # 기존 파일 덮어쓰기 (기본값: 건너뛰기)
 ```
 
-- 드라이런(실제 파일 생성 없이 흐름만 검증):
+---
 
-```bash
-uv run python -m src.main --assets assets --out out --dry-run
+## 📂 파일 정리 가이드 (File Structure)
+
+표지 이미지를 자동으로 인식시키려면 아래 예시처럼 파일을 배치하세요.
+
+### 권장 구조 1: 폴더별 정리 (가장 확실함)
+```
+assets/
+├── 전지적 독자 시점/
+│   ├── 전독시.txt
+│   └── cover.jpg        <-- 'cover.jpg' 자동 인식
+└── 나 혼자만 레벨업/
+    ├── 나혼렙.txt
+    └── cover.png
 ```
 
-- 기존 출력을 강제로 덮어쓰기:
-
-```bash
-uv run python -m src.main --assets assets --out out --overwrite
+### 권장 구조 2: 파일명 일치
+```
+assets/
+├── 달빛조각사.txt
+├── 달빛조각사.jpg       <-- 텍스트 파일명과 같으면 표지로 인식
+├── 룬의아이들.txt
+└── 룬의아이들.webp
 ```
 
-명령행 옵션 요약 (주요 옵션)
+---
 
-- `--assets`, `-a`: 입력 자산 디렉터리 (기본: `assets`)
-- `--out`, `-o`: 출력 디렉터리 (기본: `out`)
-- `--workers`, `-w`: 워커(스레드) 수
-- `--concurrency`, `-c`: 동시 실행 제한
-- `--dry-run`, `-n`: 드라이런 모드
-- `--shutdown-timeout`, `-t`: 전체 작업에 대한 타임아웃(초)
-- `--overwrite`, `-f`: 기존 출력 파일 덮어쓰기
+## ⚙️ 설정 및 커스터마이징
 
-테스트
------
+- **CSS 스타일 변경**: `src/core/converter/convert.py` 내의 `DEFAULT_CSS` 변수를 수정하여 폰트나 여백을 조정할 수 있습니다.
+- **챕터 감지 패턴**: `src/core/converter/worker.py` 내의 `chapter_pattern` 정규표현식을 수정하여 특이한 챕터 양식에 대응할 수 있습니다.
 
-로컬에서 유닛/통합 테스트를 실행하려면:
+## 📝 라이선스
 
-```bash
-uv run python -m pytest tests/ -q
-```
-
-코드 구조(간단)
-----------------
-
-- `src/main.py`: 전체 변환 파이프라인의 엔트리 포인트. 명령행 인자 처리 및 변환 루프를 담당합니다.
-- `src/lib/parser.py`: 자산(텍스트 및 표지 이미지) 분석 및 메타데이터 추출 유틸리티.
-- `src/core/converter/`: 텍스트를 EPUB으로 변환하는 핵심 로직(텍스트 파싱, 챕터 분할, Epub 생성 등).
-- `tests/`: 유닛 및 통합 테스트
-
-기여
------
-
-기여는 환영합니다. 간단한 방식:
-
-1. 포크(fork) 및 feature 브랜치 생성
-2. 변경 사항 커밋
-3. 테스트(`pytest`) 통과 확인
-4. PR 보내기
-
-라이선스
---------
-
-이 저장소는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 루트의 `LICENSE` 파일을 참고하세요.
-
-저작권 및 연도 정보를 `LICENSE` 파일에서 직접 수정하세요.
+MIT License. 자유롭게 수정하고 배포하세요.
